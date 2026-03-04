@@ -270,6 +270,28 @@ class _HomePageState extends State<HomePage> {
               child: Dismissible(
                 key: ValueKey(trx['id']),
                 direction: DismissDirection.endToStart,
+                confirmDismiss: (direction) async {
+                  return await showDialog(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      title: const Text('Delete Entry'),
+                      content: const Text('Are you sure you want to delete this entry?'),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.of(context).pop(false),
+                          child: const Text('Cancel'),
+                        ),
+                        TextButton(
+                          onPressed: () => Navigator.of(context).pop(true),
+                          style: TextButton.styleFrom(
+                            foregroundColor: Theme.of(context).colorScheme.error,
+                          ),
+                          child: const Text('Delete'),
+                        ),
+                      ],
+                    ),
+                  );
+                },
                 onDismissed: (_) => _deleteEntry(trx['id'] as int),
                 background: Container(
                   decoration: BoxDecoration(color: colorScheme.error, borderRadius: BorderRadius.circular(16)),
