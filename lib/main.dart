@@ -168,10 +168,70 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final isLandscape = MediaQuery.of(context).orientation == Orientation.landscape;
 
     if (_isInitialLoading) {
       return Scaffold(
         body: Center(child: CircularProgressIndicator(color: colorScheme.primary)),
+      );
+    }
+
+    if (isLandscape) {
+      return Scaffold(
+        body: SafeArea(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                flex: 5,
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (_error != null)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 16),
+                          child: Text(_error!, style: TextStyle(color: colorScheme.error)),
+                        ),
+                      _buildSummaryCard(colorScheme),
+                      const SizedBox(height: 24),
+                      _NewEntryForm(rate: _rate ?? 50.0, onSuccess: _fetchInitialData),
+                    ],
+                  ),
+                ),
+              ),
+              VerticalDivider(width: 1, thickness: 1, color: colorScheme.outlineVariant.withValues(alpha: 0.5)),
+              Expanded(
+                flex: 6,
+                child: RefreshIndicator(
+                  onRefresh: _fetchInitialData,
+                  color: colorScheme.primary,
+                  child: CustomScrollView(
+                    physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
+                    slivers: [
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text('Recent History', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
+                              if (_isBackgroundLoading)
+                                SizedBox(height: 15, width: 15, child: CircularProgressIndicator(strokeWidth: 2, color: colorScheme.primary)),
+                            ],
+                          ),
+                        ),
+                      ),
+                      _buildTransactionList(colorScheme),
+                      const SliverToBoxAdapter(child: SizedBox(height: 24)),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       );
     }
 
@@ -217,8 +277,41 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildAppBar(ColorScheme colorScheme) {
+  Widget _buildSummaryContent(ColorScheme colorScheme) {
     final totalEgp = _totalUsd * (_rate ?? 50.0);
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Text('Total Savings', style: TextStyle(color: colorScheme.onPrimaryContainer, fontSize: 16)),
+        const SizedBox(height: 8),
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(_usdFormat.format(_totalUsd), style: TextStyle(color: colorScheme.onSurface, fontSize: 42, fontWeight: FontWeight.bold, letterSpacing: -1)),
+        ),
+        Text(_egpFormat.format(totalEgp), style: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.6), fontSize: 18)),
+        const SizedBox(height: 8),
+        if (_rate != null) Text('1 USD = ${_rate!.toStringAsFixed(2)} EGP', style: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.6), fontSize: 14)),
+      ],
+    );
+  }
+
+  Widget _buildSummaryCard(ColorScheme colorScheme) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(32),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [colorScheme.primaryContainer, colorScheme.surface],
+        ),
+        borderRadius: BorderRadius.circular(24),
+      ),
+      child: _buildSummaryContent(colorScheme),
+    );
+  }
+
+  Widget _buildAppBar(ColorScheme colorScheme) {
     return SliverAppBar(
       expandedHeight: 220,
       pinned: true,
@@ -234,17 +327,9 @@ class _HomePageState extends State<HomePage> {
               colors: [colorScheme.primaryContainer, colorScheme.surface],
             ),
           ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const SizedBox(height: 40),
-              Text('Total Savings', style: TextStyle(color: colorScheme.onPrimaryContainer, fontSize: 16)),
-              const SizedBox(height: 8),
-              Text(_usdFormat.format(_totalUsd), style: TextStyle(color: colorScheme.onSurface, fontSize: 42, fontWeight: FontWeight.bold, letterSpacing: -1)),
-              Text(_egpFormat.format(totalEgp), style: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.6), fontSize: 18)),
-              const SizedBox(height: 8),
-              if (_rate != null) Text('1 USD = ${_rate!.toStringAsFixed(2)} EGP', style: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.6), fontSize: 14)),
-            ],
+          child: Padding(
+            padding: const EdgeInsets.only(top: 40),
+            child: _buildSummaryContent(colorScheme),
           ),
         ),
       ),
