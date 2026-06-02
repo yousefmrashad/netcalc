@@ -1,11 +1,13 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:math_expressions/math_expressions.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:dynamic_color/dynamic_color.dart'; // Added this import
+import 'package:dynamic_color/dynamic_color.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -94,6 +96,11 @@ class _HomePageState extends State<HomePage> {
   final _searchController = TextEditingController();
   String _searchQuery = '';
 
+  late SharedPreferences _prefs;
+  bool _prefsInitialized = false;
+  bool _useManualRate = false;
+  double _manualRate = 50.0;
+
   @override
   void initState() {
     super.initState();
@@ -144,8 +151,138 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  void _showExchangeRateDialog() {
+    final controller = TextEditingController(text: _manualRate.toStringAsFixed(2));
+    bool useManual = _useManualRate;
+    final colorScheme = Theme.of(context).colorScheme;
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: const Text('Exchange Rate Settings'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SegmentedButton<bool>(
+                    showSelectedIcon: false,
+                    segments: const [
+                      ButtonSegment(value: false, label: Text('Auto (API)')),
+                      ButtonSegment(value: true, label: Text('Manual')),
+                    ],
+                    selected: {useManual},
+                    onSelectionChanged: (s) {
+                      setDialogState(() {
+                        useManual = s.first;
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  if (useManual)
+                    TextField(
+                      controller: controller,
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      decoration: const InputDecoration(
+                        labelText: 'Manual EGP Rate',
+                        hintText: 'e.g. 50.0',
+                      ),
+                    )
+                  else
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8.0),
+                      child: Text(
+                        'API rate will be fetched dynamically from ExchangeRate-API.',
+                        style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 14),
+                      ),
+                    ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancel'),
+                ),
+                TextButton(
+                  onPressed: () async {
+                    final navigator = Navigator.of(context);
+                    final newRate = double.tryParse(controller.text) ?? _manualRate;
+                    setState(() {
+                      _useManualRate = useManual;
+                      if (useManual) {
+                        _manualRate = newRate;
+                        _rate = newRate;
+                      }
+                    });
+                    if (_prefsInitialized) {
+                      await _prefs.setBool('use_manual_rate', useManual);
+                      await _prefs.setDouble('manual_rate', newRate);
+                    }
+                    if (!useManual) {
+                      _fetchInitialData();
+                    }
+                    navigator.pop();
+                  },
+                  child: const Text('Save'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _exportToCsv() {
+    try {
+      final buffer = StringBuffer();
+      buffer.writeln('Date,Description,Amount (USD),Exchange Rate');
+      for (final trx in _transactions) {
+        final date = trx['date'] ?? '';
+        String desc = trx['description'] ?? '';
+        if (desc.contains(',')) {
+          desc = '"$desc"';
+        }
+        final amount = trx['amount'] ?? 0.0;
+        final rate = trx['rate'] ?? _rate ?? 50.0;
+        buffer.writeln('$date,$desc,$amount,$rate');
+      }
+
+      Clipboard.setData(ClipboardData(text: buffer.toString()));
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Calculation history copied to clipboard as CSV!')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to export history.')),
+      );
+    }
+  }
+
   Future<void> _fetchInitialData() async {
     if (!mounted) return;
+
+    if (!_prefsInitialized) {
+      try {
+        _prefs = await SharedPreferences.getInstance();
+        _useManualRate = _prefs.getBool('use_manual_rate') ?? false;
+        _manualRate = _prefs.getDouble('manual_rate') ?? 50.0;
+
+        final cachedJson = _prefs.getString('cached_transactions');
+        if (cachedJson != null) {
+          final List<dynamic> cachedList = jsonDecode(cachedJson);
+          setState(() {
+            _transactions = cachedList;
+            _totalUsd = _calculateTotalUsd(cachedList);
+            _isInitialLoading = false;
+          });
+        }
+        _prefsInitialized = true;
+      } catch (_) {}
+    }
 
     setState(() {
       if (_transactions.isEmpty) {
@@ -160,9 +297,13 @@ class _HomePageState extends State<HomePage> {
       final double rate = results[0] as double;
       final List<dynamic> transactions = results[1] as List<dynamic>;
 
+      if (_prefsInitialized) {
+        await _prefs.setString('cached_transactions', jsonEncode(transactions));
+      }
+
       if (!mounted) return;
       setState(() {
-        _rate = rate;
+        _rate = _useManualRate ? _manualRate : rate;
         _transactions = transactions;
         _totalUsd = _calculateTotalUsd(transactions);
         _isInitialLoading = false;
@@ -171,7 +312,10 @@ class _HomePageState extends State<HomePage> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = "Connection issue. Pull to retry.";
+        _rate = _useManualRate ? _manualRate : (_rate ?? 50.0);
+        _error = _transactions.isNotEmpty
+            ? "Offline mode. Showing cached data."
+            : "Connection issue. Pull to retry.";
         _isInitialLoading = false;
         _isBackgroundLoading = false;
       });
@@ -199,6 +343,9 @@ class _HomePageState extends State<HomePage> {
 
     try {
       await supabase.from('transactions').delete().eq('id', id);
+      if (_prefsInitialized) {
+        await _prefs.setString('cached_transactions', jsonEncode(_transactions));
+      }
     } catch (e) {
       _fetchInitialData();
     }
@@ -267,8 +414,20 @@ class _HomePageState extends State<HomePage> {
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text('Recent History', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
-                                  if (_isBackgroundLoading)
-                                    SizedBox(height: 15, width: 15, child: CircularProgressIndicator(strokeWidth: 2, color: colorScheme.primary)),
+                                  Row(
+                                    children: [
+                                      if (_transactions.isNotEmpty)
+                                        IconButton(
+                                          icon: const Icon(Icons.copy_all),
+                                          tooltip: 'Export CSV',
+                                          onPressed: _exportToCsv,
+                                        ),
+                                      if (_isBackgroundLoading) ...[
+                                        const SizedBox(width: 8),
+                                        SizedBox(height: 15, width: 15, child: CircularProgressIndicator(strokeWidth: 2, color: colorScheme.primary)),
+                                      ],
+                                    ],
+                                  ),
                                 ],
                               ),
                               if (_transactions.isNotEmpty) ...[
@@ -317,8 +476,20 @@ class _HomePageState extends State<HomePage> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text('Recent History', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
-                        if (_isBackgroundLoading)
-                           SizedBox(height: 15, width: 15, child: CircularProgressIndicator(strokeWidth: 2, color: colorScheme.primary)),
+                        Row(
+                          children: [
+                            if (_transactions.isNotEmpty)
+                              IconButton(
+                                icon: const Icon(Icons.copy_all),
+                                tooltip: 'Export CSV',
+                                onPressed: _exportToCsv,
+                              ),
+                            if (_isBackgroundLoading) ...[
+                              const SizedBox(width: 8),
+                              SizedBox(height: 15, width: 15, child: CircularProgressIndicator(strokeWidth: 2, color: colorScheme.primary)),
+                            ],
+                          ],
+                        ),
                       ],
                     ),
                     if (_transactions.isNotEmpty) ...[
@@ -350,7 +521,25 @@ class _HomePageState extends State<HomePage> {
         ),
         Text(_egpFormat.format(totalEgp), style: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.6), fontSize: 18)),
         const SizedBox(height: 8),
-        if (_rate != null) Text('1 USD = ${_rate!.toStringAsFixed(2)} EGP', style: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.6), fontSize: 14)),
+        if (_rate != null)
+          TextButton.icon(
+            onPressed: _showExchangeRateDialog,
+            icon: Icon(Icons.edit, size: 12, color: colorScheme.onSurface.withValues(alpha: 0.6)),
+            label: Text(
+              '1 USD = ${_rate!.toStringAsFixed(2)} EGP ${_useManualRate ? "(Manual)" : ""}',
+              style: TextStyle(
+                color: colorScheme.onSurface.withValues(alpha: 0.6),
+                fontSize: 14,
+                decoration: TextDecoration.underline,
+                decorationColor: colorScheme.onSurface.withValues(alpha: 0.3),
+              ),
+            ),
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+          ),
       ],
     );
   }
@@ -529,7 +718,11 @@ class _NewEntryFormState extends State<_NewEntryForm> {
           widget.onSuccess();
         }
       } catch (e) {
-        // Handle math or submission error
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Failed to add transaction. Please check your internet connection.')),
+          );
+        }
       } finally {
         if (mounted) setState(() => _isSaving = false);
       }
