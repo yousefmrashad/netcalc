@@ -91,10 +91,57 @@ class _HomePageState extends State<HomePage> {
   final _usdFormat = NumberFormat.currency(locale: 'en_US', symbol: '\$');
   final _egpFormat = NumberFormat.currency(locale: 'en_US', symbol: 'EGP ');
 
+  final _searchController = TextEditingController();
+  String _searchQuery = '';
+
   @override
   void initState() {
     super.initState();
     _fetchInitialData();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  List<dynamic> get _filteredTransactions {
+    if (_searchQuery.isEmpty) return _transactions;
+    final query = _searchQuery.toLowerCase();
+    return _transactions.where((trx) {
+      final desc = (trx['description'] as String?)?.toLowerCase() ?? '';
+      final date = (trx['date'] as String?)?.toLowerCase() ?? '';
+      final amount = trx['amount']?.toString() ?? '';
+      return desc.contains(query) || date.contains(query) || amount.contains(query);
+    }).toList();
+  }
+
+  Widget _buildSearchBar(ColorScheme colorScheme) {
+    return TextField(
+      controller: _searchController,
+      onChanged: (value) {
+        setState(() {
+          _searchQuery = value;
+        });
+      },
+      decoration: InputDecoration(
+        hintText: 'Search history...',
+        prefixIcon: Icon(Icons.search, color: colorScheme.onSurfaceVariant),
+        suffixIcon: _searchQuery.isNotEmpty
+            ? IconButton(
+                icon: Icon(Icons.clear, color: colorScheme.onSurfaceVariant),
+                onPressed: () {
+                  _searchController.clear();
+                  setState(() {
+                    _searchQuery = '';
+                  });
+                },
+              )
+            : null,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      ),
+    );
   }
 
   Future<void> _fetchInitialData() async {
@@ -213,12 +260,21 @@ class _HomePageState extends State<HomePage> {
                       SliverToBoxAdapter(
                         child: Padding(
                           padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text('Recent History', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
-                              if (_isBackgroundLoading)
-                                SizedBox(height: 15, width: 15, child: CircularProgressIndicator(strokeWidth: 2, color: colorScheme.primary)),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text('Recent History', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
+                                  if (_isBackgroundLoading)
+                                    SizedBox(height: 15, width: 15, child: CircularProgressIndicator(strokeWidth: 2, color: colorScheme.primary)),
+                                ],
+                              ),
+                              if (_transactions.isNotEmpty) ...[
+                                const SizedBox(height: 12),
+                                _buildSearchBar(colorScheme),
+                              ],
                             ],
                           ),
                         ),
@@ -265,6 +321,10 @@ class _HomePageState extends State<HomePage> {
                            SizedBox(height: 15, width: 15, child: CircularProgressIndicator(strokeWidth: 2, color: colorScheme.primary)),
                       ],
                     ),
+                    if (_transactions.isNotEmpty) ...[
+                      const SizedBox(height: 12),
+                      _buildSearchBar(colorScheme),
+                    ],
                     const SizedBox(height: 12),
                   ],
                 ),
@@ -344,12 +404,36 @@ class _HomePageState extends State<HomePage> {
       );
     }
 
+    final filtered = _filteredTransactions;
+    if (filtered.isEmpty) {
+      return SliverFillRemaining(
+        hasScrollBody: false,
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.search_off, size: 48, color: colorScheme.onSurfaceVariant.withValues(alpha: 0.5)),
+                const SizedBox(height: 16),
+                Text(
+                  "No matches found for '$_searchQuery'",
+                  style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 16),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
     return SliverPadding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       sliver: SliverList(
         delegate: SliverChildBuilderDelegate(
           (context, index) {
-            final trx = _transactions[index];
+            final trx = filtered[index];
             return Padding(
               padding: const EdgeInsets.only(bottom: 8.0),
               child: Dismissible(
@@ -398,7 +482,7 @@ class _HomePageState extends State<HomePage> {
               ),
             );
           },
-          childCount: _transactions.length,
+          childCount: filtered.length,
         ),
       ),
     );
