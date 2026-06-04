@@ -1,17 +1,26 @@
-# netcalc_app
+# NetCalc
 
-A new Flutter project.
+NetCalc is a simple, minimal personal finance application. It allows you to log transactions, track your overall savings, and review your financial history.
 
-## Getting Started
+### 🌟 Key Features
+* **Multi-Currency Support:** Handles entries in both USD and EGP with automatic live conversion.
+* **Smart Staging:** Features a math expression parser that lets you evaluate calculations directly in the transaction amount field.
+* **Cloud Database:** Backed by Supabase for simple storage management.
 
-This project is a starting point for a Flutter application.
+### ⚠️ Security Warning
 
-A few resources to get you started if this is your first Flutter project:
+This application relies on packaging environment variables (like API keys and database credentials) directly inside the build. 
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+Please note that compiling or embedding secret keys into client-side application packages carries **inherent security risks** (as they can potentially be extracted or decompiled by third parties). Use with caution and only in trusted environments.
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+### Requirements
+
+To run, the app expects the following configuration:
+* `PASSWORD`
+* `API_KEY`
+* `SUPABASE_URL`
+* `SUPABASE_KEY`
+
+### License
+
+This project is licensed under the GNU GPLv3 License.
