@@ -1,7 +1,7 @@
 [project]
-name = "house-management-2-0"
+name = "netcalc"
 version = "0.1.0"
-description = "Add your description here"
+description = "A simple personal finance app to track transactions and calculate savings."
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
