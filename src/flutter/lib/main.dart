@@ -661,7 +661,10 @@ class _HomePageState extends State<HomePage> {
                   child: ListTile(
                     contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
                     title: Text(trx['description'], style: const TextStyle(fontWeight: FontWeight.w600)),
-                    subtitle: Text(trx['date'], style: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.6))),
+                    subtitle: Text(
+                      '${trx['date']}  •  @ ${(trx['rate'] as num?)?.toStringAsFixed(2) ?? '50.00'} EGP',
+                      style: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.6)),
+                    ),
                     trailing: Text(
                       _usdFormat.format(trx['amount']), 
                       style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: colorScheme.primary)
