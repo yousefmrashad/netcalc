@@ -54,11 +54,14 @@ dev_dependencies:
   flutter_lints: ^6.0.0
   flutter_native_splash: ^2.4.7
   flutter_launcher_icons: ^0.13.1
+  msix: ^3.16.13
 
 flutter_launcher_icons:
   android: "ic_launcher"
   ios: true
-  windows: true
+  windows:
+    generate: true
+    image_path: "assets/icon.png"
   image_path: "assets/icon.png"
   min_sdk_android: 21 # should be same as minSdk in android/app/build.gradle
 
@@ -127,3 +130,9 @@ flutter_native_splash:
 
   android: true
   ios: true
+
+msix_config:
+  display_name: NetCalc
+  publisher_display_name: yousefmrashad
+  identity_name: yousefmrashad.netcalc
+  logo_path: windows\runner\resources\app_icon.ico
