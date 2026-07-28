@@ -53,7 +53,9 @@ class _HomePageState extends State<HomePage> {
       final desc = (trx['description'] as String?)?.toLowerCase() ?? '';
       final date = (trx['date'] as String?)?.toLowerCase() ?? '';
       final amount = trx['amount']?.toString() ?? '';
-      return desc.contains(query) || date.contains(query) || amount.contains(query);
+      return desc.contains(query) ||
+          date.contains(query) ||
+          amount.contains(query);
     }).toList();
   }
 
@@ -79,13 +81,18 @@ class _HomePageState extends State<HomePage> {
                 },
               )
             : null,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 12,
+        ),
       ),
     );
   }
 
   void _showExchangeRateDialog() {
-    final controller = TextEditingController(text: _manualRate.toStringAsFixed(2));
+    final controller = TextEditingController(
+      text: _manualRate.toStringAsFixed(2),
+    );
     bool useManual = _useManualRate;
     final colorScheme = Theme.of(context).colorScheme;
 
@@ -117,7 +124,9 @@ class _HomePageState extends State<HomePage> {
                   if (useManual)
                     TextField(
                       controller: controller,
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
                       decoration: const InputDecoration(
                         labelText: 'Manual EGP Rate',
                         hintText: 'e.g. 50.0',
@@ -128,7 +137,10 @@ class _HomePageState extends State<HomePage> {
                       padding: const EdgeInsets.only(top: 8.0),
                       child: Text(
                         'API rate will be fetched dynamically from ExchangeRate-API.',
-                        style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 14),
+                        style: TextStyle(
+                          color: colorScheme.onSurfaceVariant,
+                          fontSize: 14,
+                        ),
                       ),
                     ),
                 ],
@@ -141,7 +153,8 @@ class _HomePageState extends State<HomePage> {
                 TextButton(
                   onPressed: () async {
                     final navigator = Navigator.of(context);
-                    final newRate = double.tryParse(controller.text) ?? _manualRate;
+                    final newRate =
+                        double.tryParse(controller.text) ?? _manualRate;
                     setState(() {
                       _useManualRate = useManual;
                       if (useManual) {
@@ -186,7 +199,9 @@ class _HomePageState extends State<HomePage> {
       Clipboard.setData(ClipboardData(text: buffer.toString()));
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Calculation history copied to clipboard as CSV!')),
+        const SnackBar(
+          content: Text('Calculation history copied to clipboard as CSV!'),
+        ),
       );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -226,7 +241,10 @@ class _HomePageState extends State<HomePage> {
     });
 
     try {
-      final results = await Future.wait([_getExchangeRate(), _loadTransactions()]);
+      final results = await Future.wait([
+        _getExchangeRate(),
+        _loadTransactions(),
+      ]);
       final double rate = results[0] as double;
       final List<dynamic> transactions = results[1] as List<dynamic>;
 
@@ -258,14 +276,17 @@ class _HomePageState extends State<HomePage> {
   Future<double> _getExchangeRate() async {
     final apiKey = dotenv.get('EXCHANGE_RATE_API_KEY', fallback: 'FREE');
     if (apiKey == 'FREE') return 50.0;
-    
+
     try {
-      final response = await http.get(Uri.parse('https://v6.exchangerate-api.com/v6/$apiKey/latest/USD'));
+      final response = await http.get(
+        Uri.parse('https://v6.exchangerate-api.com/v6/$apiKey/latest/USD'),
+      );
       if (response.statusCode == 200) {
-        return (jsonDecode(response.body)['conversion_rates']['EGP'] as num).toDouble();
+        return (jsonDecode(response.body)['conversion_rates']['EGP'] as num)
+            .toDouble();
       }
     } catch (_) {}
-    return 50.0; 
+    return 50.0;
   }
 
   Future<void> _deleteEntry(int id) async {
@@ -277,7 +298,10 @@ class _HomePageState extends State<HomePage> {
     try {
       await supabase.from('transactions').delete().eq('id', id);
       if (_prefsInitialized) {
-        await _prefs.setString('cached_transactions', jsonEncode(_transactions));
+        await _prefs.setString(
+          'cached_transactions',
+          jsonEncode(_transactions),
+        );
       }
     } catch (e) {
       _fetchInitialData();
@@ -285,21 +309,30 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<List<dynamic>> _loadTransactions() async {
-    return await supabase.from('transactions').select().order('created_at', ascending: false);
+    return await supabase
+        .from('transactions')
+        .select()
+        .order('created_at', ascending: false);
   }
 
   double _calculateTotalUsd(List<dynamic> transactions) {
-    return transactions.fold(0.0, (sum, item) => sum + (item['amount'] as num).toDouble());
+    return transactions.fold(
+      0.0,
+      (sum, item) => sum + (item['amount'] as num).toDouble(),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final isLandscape = MediaQuery.of(context).orientation == Orientation.landscape;
+    final isLandscape =
+        MediaQuery.of(context).orientation == Orientation.landscape;
 
     if (_isInitialLoading) {
       return Scaffold(
-        body: Center(child: CircularProgressIndicator(color: colorScheme.primary)),
+        body: Center(
+          child: CircularProgressIndicator(color: colorScheme.primary),
+        ),
       );
     }
 
@@ -319,23 +352,35 @@ class _HomePageState extends State<HomePage> {
                       if (_error != null)
                         Padding(
                           padding: const EdgeInsets.only(bottom: 16),
-                          child: Text(_error!, style: TextStyle(color: colorScheme.error)),
+                          child: Text(
+                            _error!,
+                            style: TextStyle(color: colorScheme.error),
+                          ),
                         ),
                       _buildSummaryCard(colorScheme),
                       const SizedBox(height: 24),
-                      NewEntryForm(rate: _rate ?? 50.0, onSuccess: _fetchInitialData),
+                      NewEntryForm(
+                        rate: _rate ?? 50.0,
+                        onSuccess: _fetchInitialData,
+                      ),
                     ],
                   ),
                 ),
               ),
-              VerticalDivider(width: 1, thickness: 1, color: colorScheme.outlineVariant.withValues(alpha: 0.5)),
+              VerticalDivider(
+                width: 1,
+                thickness: 1,
+                color: colorScheme.outlineVariant.withValues(alpha: 0.5),
+              ),
               Expanded(
                 flex: 6,
                 child: RefreshIndicator(
                   onRefresh: _fetchInitialData,
                   color: colorScheme.primary,
                   child: CustomScrollView(
-                    physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
+                    physics: const BouncingScrollPhysics(
+                      parent: AlwaysScrollableScrollPhysics(),
+                    ),
                     slivers: [
                       SliverToBoxAdapter(
                         child: Padding(
@@ -344,9 +389,16 @@ class _HomePageState extends State<HomePage> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
                                 children: [
-                                  Text('Recent History', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
+                                  Text(
+                                    'Recent History',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleLarge
+                                        ?.copyWith(fontWeight: FontWeight.bold),
+                                  ),
                                   Row(
                                     children: [
                                       if (_transactions.isNotEmpty)
@@ -357,7 +409,14 @@ class _HomePageState extends State<HomePage> {
                                         ),
                                       if (_isBackgroundLoading) ...[
                                         const SizedBox(width: 8),
-                                        SizedBox(height: 15, width: 15, child: CircularProgressIndicator(strokeWidth: 2, color: colorScheme.primary)),
+                                        SizedBox(
+                                          height: 15,
+                                          width: 15,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            color: colorScheme.primary,
+                                          ),
+                                        ),
                                       ],
                                     ],
                                   ),
@@ -389,7 +448,9 @@ class _HomePageState extends State<HomePage> {
         color: colorScheme.primary,
         edgeOffset: 100,
         child: CustomScrollView(
-          physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
+          physics: const BouncingScrollPhysics(
+            parent: AlwaysScrollableScrollPhysics(),
+          ),
           slivers: [
             _buildAppBar(colorScheme),
             SliverToBoxAdapter(
@@ -401,14 +462,24 @@ class _HomePageState extends State<HomePage> {
                     if (_error != null)
                       Padding(
                         padding: const EdgeInsets.only(bottom: 16),
-                        child: Text(_error!, style: TextStyle(color: colorScheme.error)),
+                        child: Text(
+                          _error!,
+                          style: TextStyle(color: colorScheme.error),
+                        ),
                       ),
-                    NewEntryForm(rate: _rate ?? 50.0, onSuccess: _fetchInitialData),
+                    NewEntryForm(
+                      rate: _rate ?? 50.0,
+                      onSuccess: _fetchInitialData,
+                    ),
                     const SizedBox(height: 24),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text('Recent History', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
+                        Text(
+                          'Recent History',
+                          style: Theme.of(context).textTheme.titleLarge
+                              ?.copyWith(fontWeight: FontWeight.bold),
+                        ),
                         Row(
                           children: [
                             if (_transactions.isNotEmpty)
@@ -419,7 +490,14 @@ class _HomePageState extends State<HomePage> {
                               ),
                             if (_isBackgroundLoading) ...[
                               const SizedBox(width: 8),
-                              SizedBox(height: 15, width: 15, child: CircularProgressIndicator(strokeWidth: 2, color: colorScheme.primary)),
+                              SizedBox(
+                                height: 15,
+                                width: 15,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: colorScheme.primary,
+                                ),
+                              ),
                             ],
                           ],
                         ),
@@ -446,18 +524,39 @@ class _HomePageState extends State<HomePage> {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Text('Total Savings', style: TextStyle(color: colorScheme.onPrimaryContainer, fontSize: 16)),
+        Text(
+          'Total Savings',
+          style: TextStyle(color: colorScheme.onPrimaryContainer, fontSize: 16),
+        ),
         const SizedBox(height: 8),
         FittedBox(
           fit: BoxFit.scaleDown,
-          child: Text(_usdFormat.format(_totalUsd), style: TextStyle(color: colorScheme.onSurface, fontSize: 42, fontWeight: FontWeight.bold, letterSpacing: -1)),
+          child: Text(
+            _usdFormat.format(_totalUsd),
+            style: TextStyle(
+              color: colorScheme.onSurface,
+              fontSize: 42,
+              fontWeight: FontWeight.bold,
+              letterSpacing: -1,
+            ),
+          ),
         ),
-        Text(_egpFormat.format(totalEgp), style: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.6), fontSize: 18)),
+        Text(
+          _egpFormat.format(totalEgp),
+          style: TextStyle(
+            color: colorScheme.onSurface.withValues(alpha: 0.6),
+            fontSize: 18,
+          ),
+        ),
         const SizedBox(height: 8),
         if (_rate != null)
           TextButton.icon(
             onPressed: _showExchangeRateDialog,
-            icon: Icon(Icons.edit, size: 12, color: colorScheme.onSurface.withValues(alpha: 0.6)),
+            icon: Icon(
+              Icons.edit,
+              size: 12,
+              color: colorScheme.onSurface.withValues(alpha: 0.6),
+            ),
             label: Text(
               '1 USD = ${_rate!.toStringAsFixed(2)} EGP ${_useManualRate ? "(Manual)" : ""}',
               style: TextStyle(
@@ -522,7 +621,12 @@ class _HomePageState extends State<HomePage> {
     if (_transactions.isEmpty) {
       return SliverFillRemaining(
         hasScrollBody: false,
-        child: Center(child: Text("No transactions yet", style: TextStyle(color: colorScheme.onSurfaceVariant))),
+        child: Center(
+          child: Text(
+            "No transactions yet",
+            style: TextStyle(color: colorScheme.onSurfaceVariant),
+          ),
+        ),
       );
     }
 
@@ -536,11 +640,18 @@ class _HomePageState extends State<HomePage> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.search_off, size: 48, color: colorScheme.onSurfaceVariant.withValues(alpha: 0.5)),
+                Icon(
+                  Icons.search_off,
+                  size: 48,
+                  color: colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+                ),
                 const SizedBox(height: 16),
                 Text(
                   "No matches found for '$_searchQuery'",
-                  style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 16),
+                  style: TextStyle(
+                    color: colorScheme.onSurfaceVariant,
+                    fontSize: 16,
+                  ),
                   textAlign: TextAlign.center,
                 ),
               ],
@@ -553,62 +664,76 @@ class _HomePageState extends State<HomePage> {
     return SliverPadding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       sliver: SliverList(
-        delegate: SliverChildBuilderDelegate(
-          (context, index) {
-            final trx = filtered[index];
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 8.0),
-              child: Dismissible(
-                key: ValueKey(trx['id']),
-                direction: DismissDirection.endToStart,
-                confirmDismiss: (direction) async {
-                  return await showDialog(
-                    context: context,
-                    builder: (context) => AlertDialog(
-                      title: const Text('Delete Entry'),
-                      content: const Text('Are you sure you want to delete this entry?'),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.of(context).pop(false),
-                          child: const Text('Cancel'),
-                        ),
-                        TextButton(
-                          onPressed: () => Navigator.of(context).pop(true),
-                          style: TextButton.styleFrom(
-                            foregroundColor: Theme.of(context).colorScheme.error,
-                          ),
-                          child: const Text('Delete'),
-                        ),
-                      ],
+        delegate: SliverChildBuilderDelegate((context, index) {
+          final trx = filtered[index];
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 8.0),
+            child: Dismissible(
+              key: ValueKey(trx['id']),
+              direction: DismissDirection.endToStart,
+              confirmDismiss: (direction) async {
+                return await showDialog(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    title: const Text('Delete Entry'),
+                    content: const Text(
+                      'Are you sure you want to delete this entry?',
                     ),
-                  );
-                },
-                onDismissed: (_) => _deleteEntry(trx['id'] as int),
-                background: Container(
-                  decoration: BoxDecoration(color: colorScheme.error, borderRadius: BorderRadius.circular(16)),
-                  alignment: Alignment.centerRight,
-                  padding: const EdgeInsets.only(right: 20),
-                  child: Icon(Icons.delete_outline, color: colorScheme.onError),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(false),
+                        child: const Text('Cancel'),
+                      ),
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(true),
+                        style: TextButton.styleFrom(
+                          foregroundColor: Theme.of(context).colorScheme.error,
+                        ),
+                        child: const Text('Delete'),
+                      ),
+                    ],
+                  ),
+                );
+              },
+              onDismissed: (_) => _deleteEntry(trx['id'] as int),
+              background: Container(
+                decoration: BoxDecoration(
+                  color: colorScheme.error,
+                  borderRadius: BorderRadius.circular(16),
                 ),
-                child: Card(
-                  child: ListTile(
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                    title: Text(trx['description'], style: const TextStyle(fontWeight: FontWeight.w600)),
-                    subtitle: Text(
-                      '${trx['date']}  •  @ ${(trx['rate'] as num?)?.toStringAsFixed(2) ?? '50.00'} EGP',
-                      style: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.6)),
+                alignment: Alignment.centerRight,
+                padding: const EdgeInsets.only(right: 20),
+                child: Icon(Icons.delete_outline, color: colorScheme.onError),
+              ),
+              child: Card(
+                child: ListTile(
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 8,
+                  ),
+                  title: Text(
+                    trx['description'],
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  subtitle: Text(
+                    '${trx['date']}  •  @ ${(trx['rate'] as num?)?.toStringAsFixed(2) ?? '50.00'} EGP',
+                    style: TextStyle(
+                      color: colorScheme.onSurface.withValues(alpha: 0.6),
                     ),
-                    trailing: Text(
-                      _usdFormat.format(trx['amount']), 
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: colorScheme.primary)
+                  ),
+                  trailing: Text(
+                    _usdFormat.format(trx['amount']),
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                      color: colorScheme.primary,
                     ),
                   ),
                 ),
               ),
-            );
-          },
-          childCount: filtered.length,
-        ),
+            ),
+          );
+        }, childCount: filtered.length),
       ),
     );
   }

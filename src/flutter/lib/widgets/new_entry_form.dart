@@ -25,11 +25,18 @@ class _NewEntryFormState extends State<NewEntryForm> {
       try {
         final p = ShuntingYardParser();
         final exp = p.parse(_amountController.text);
-        final double amountVal = exp.evaluate(EvaluationType.REAL, ContextModel());
+        final double amountVal = exp.evaluate(
+          EvaluationType.REAL,
+          ContextModel(),
+        );
 
-        double finalAmount = _currencySelection.first == 'EGP' ? amountVal / widget.rate : amountVal;
+        double finalAmount = _currencySelection.first == 'EGP'
+            ? amountVal / widget.rate
+            : amountVal;
 
-        final dateStr = DateFormat('MMM dd, yyyy • HH:mm').format(DateTime.now());
+        final dateStr = DateFormat(
+          'MMM dd, yyyy • HH:mm',
+        ).format(DateTime.now());
         await supabase.from('transactions').insert({
           'description': _descController.text,
           'amount': finalAmount,
@@ -45,7 +52,11 @@ class _NewEntryFormState extends State<NewEntryForm> {
       } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Failed to add transaction. Please check your internet connection.')),
+            const SnackBar(
+              content: Text(
+                'Failed to add transaction. Please check your internet connection.',
+              ),
+            ),
           );
         }
       } finally {
@@ -78,7 +89,9 @@ class _NewEntryFormState extends State<NewEntryForm> {
           children: [
             TextFormField(
               controller: _descController,
-              decoration: const InputDecoration(hintText: 'What did you add? (e.g. Salary)'),
+              decoration: const InputDecoration(
+                hintText: 'What did you add? (e.g. Salary)',
+              ),
               validator: (v) => (v == null || v.isEmpty) ? 'Required' : null,
             ),
             const SizedBox(height: 12),
@@ -88,10 +101,17 @@ class _NewEntryFormState extends State<NewEntryForm> {
                   child: TextFormField(
                     controller: _amountController,
                     keyboardType: TextInputType.text,
-                    decoration: const InputDecoration(hintText: 'Amount (100*2)'),
+                    decoration: const InputDecoration(
+                      hintText: 'Amount (100*2)',
+                    ),
                     validator: (value) {
                       if (value == null || value.isEmpty) return 'Required';
-                      try { ShuntingYardParser().parse(value); return null; } catch (e) { return 'Error'; }
+                      try {
+                        ShuntingYardParser().parse(value);
+                        return null;
+                      } catch (e) {
+                        return 'Error';
+                      }
                     },
                   ),
                 ),
@@ -103,8 +123,9 @@ class _NewEntryFormState extends State<NewEntryForm> {
                     ButtonSegment(value: 'EGP', label: Text('EGP')),
                   ],
                   selected: _currencySelection,
-                  onSelectionChanged: (s) => setState(() => _currencySelection = s),
-                )
+                  onSelectionChanged: (s) =>
+                      setState(() => _currencySelection = s),
+                ),
               ],
             ),
             const SizedBox(height: 16),
@@ -116,13 +137,25 @@ class _NewEntryFormState extends State<NewEntryForm> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: colorScheme.primary,
                   foregroundColor: colorScheme.onPrimary,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
-                child: _isSaving 
-                  ? SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: colorScheme.onPrimary)) 
-                  : const Text('Add to Balance', style: TextStyle(fontWeight: FontWeight.bold)),
+                child: _isSaving
+                    ? SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: colorScheme.onPrimary,
+                        ),
+                      )
+                    : const Text(
+                        'Add to Balance',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
               ),
-            )
+            ),
           ],
         ),
       ),

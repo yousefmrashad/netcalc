@@ -31,14 +31,21 @@ class MyApp extends StatelessWidget {
           lightColorScheme = lightDynamic.harmonized();
           darkColorScheme = darkDynamic.harmonized();
         } else {
-          lightColorScheme = ColorScheme.fromSeed(seedColor: Colors.teal, brightness: Brightness.light);
-          darkColorScheme = ColorScheme.fromSeed(seedColor: Colors.teal, brightness: Brightness.dark);
+          lightColorScheme = ColorScheme.fromSeed(
+            seedColor: Colors.teal,
+            brightness: Brightness.light,
+          );
+          darkColorScheme = ColorScheme.fromSeed(
+            seedColor: Colors.teal,
+            brightness: Brightness.dark,
+          );
         }
 
         return MaterialApp(
           title: 'Savings Tracker',
           debugShowCheckedModeBanner: false,
-          themeMode: ThemeMode.system, // Automatically uses device's Light/Dark mode
+          themeMode:
+              ThemeMode.system, // Automatically uses device's Light/Dark mode
           theme: _buildTheme(lightColorScheme),
           darkTheme: _buildTheme(darkColorScheme),
           home: const HomePage(),
@@ -61,8 +68,14 @@ class MyApp extends StatelessWidget {
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: colorScheme.onSurface.withValues(alpha: 0.05),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: colorScheme.primary)),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: colorScheme.primary),
+        ),
       ),
     );
   }
