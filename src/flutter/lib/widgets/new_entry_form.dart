@@ -17,7 +17,38 @@ class _NewEntryFormState extends State<NewEntryForm> {
   final _descController = TextEditingController();
   final _amountController = TextEditingController();
   Set<String> _currencySelection = {'USD'};
+  DateTime? _selectedDateTime;
   bool _isSaving = false;
+
+  Future<void> _pickDateTime() async {
+    final now = DateTime.now();
+    final initial = _selectedDateTime ?? now;
+    final pickedDate = await showDatePicker(
+      context: context,
+      initialDate: initial,
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2100),
+    );
+    if (pickedDate == null) return;
+    if (!mounted) return;
+
+    final pickedTime = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.fromDateTime(initial),
+    );
+    if (pickedTime == null) return;
+    if (!mounted) return;
+
+    setState(() {
+      _selectedDateTime = DateTime(
+        pickedDate.year,
+        pickedDate.month,
+        pickedDate.day,
+        pickedTime.hour,
+        pickedTime.minute,
+      );
+    });
+  }
 
   Future<void> _submitForm() async {
     if (_formKey.currentState!.validate()) {
@@ -34,9 +65,11 @@ class _NewEntryFormState extends State<NewEntryForm> {
             ? amountVal / widget.rate
             : amountVal;
 
+        final targetDate = _selectedDateTime ?? DateTime.now();
         final dateStr = DateFormat(
           'MMM dd, yyyy • HH:mm',
-        ).format(DateTime.now());
+        ).format(targetDate);
+
         await supabase.from('transactions').insert({
           'description': _descController.text,
           'amount': finalAmount,
@@ -47,6 +80,9 @@ class _NewEntryFormState extends State<NewEntryForm> {
         if (mounted) {
           _descController.clear();
           _amountController.clear();
+          setState(() {
+            _selectedDateTime = null;
+          });
           widget.onSuccess();
         }
       } catch (e) {
@@ -127,6 +163,69 @@ class _NewEntryFormState extends State<NewEntryForm> {
                       setState(() => _currencySelection = s),
                 ),
               ],
+            ),
+            const SizedBox(height: 12),
+            InkWell(
+              onTap: _pickDateTime,
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
+                decoration: BoxDecoration(
+                  color: colorScheme.onSurface.withValues(alpha: 0.05),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.calendar_today_rounded,
+                      size: 18,
+                      color: _selectedDateTime != null
+                          ? colorScheme.primary
+                          : colorScheme.onSurfaceVariant,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        _selectedDateTime == null
+                            ? 'Date & Time: Now (Default)'
+                            : DateFormat(
+                                'MMM dd, yyyy • HH:mm',
+                              ).format(_selectedDateTime!),
+                        style: TextStyle(
+                          color: _selectedDateTime != null
+                              ? colorScheme.primary
+                              : colorScheme.onSurfaceVariant,
+                          fontWeight: _selectedDateTime != null
+                              ? FontWeight.w600
+                              : FontWeight.normal,
+                        ),
+                      ),
+                    ),
+                    if (_selectedDateTime != null)
+                      IconButton(
+                        icon: const Icon(Icons.close, size: 18),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                        onPressed: () =>
+                            setState(() => _selectedDateTime = null),
+                        tooltip: 'Reset to Now',
+                      )
+                    else
+                      Text(
+                        'Tap to change',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: colorScheme.onSurfaceVariant.withValues(
+                            alpha: 0.7,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
             ),
             const SizedBox(height: 16),
             SizedBox(
