@@ -1,7 +1,7 @@
 <script lang="ts">
   import { Plus, Calculator, Check, AlertCircle, Loader2 } from 'lucide-svelte';
   import { evaluateMathExpression } from '../mathParser';
-  import { supabase } from '../supabase';
+  import { insertTransaction } from '../db';
   import { formatDateNow, formatUsd } from '../formatters';
   import type { Currency } from '../types';
 
@@ -87,14 +87,12 @@
 
     isSaving = true;
     try {
-      const { error } = await supabase.from('transactions').insert({
+      await insertTransaction({
         description: description.trim(),
         amount: baseAmountUsd,
         rate: rate,
         date: formattedDate
       });
-
-      if (error) throw error;
 
       // Reset form on success
       description = '';

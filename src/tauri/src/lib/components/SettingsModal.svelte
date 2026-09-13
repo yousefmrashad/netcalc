@@ -1,28 +1,66 @@
 <script lang="ts">
-  import { X, Settings, RefreshCw, Check } from 'lucide-svelte';
+  import { X, Settings, RefreshCw, Check, Database, Cloud } from 'lucide-svelte';
+
+  export interface SettingsPayload {
+    useManualRate: boolean;
+    manualRate: number;
+    apiKey: string;
+    backend: 'sqlite' | 'supabase';
+    supabaseUrl: string;
+    supabaseAnonKey: string;
+  }
 
   interface Props {
     useManualRate: boolean;
     manualRate: number;
     apiRate: number | null;
-    onSave: (useManual: boolean, rateVal: number) => void;
+    apiKey: string;
+    backend: 'sqlite' | 'supabase';
+    supabaseUrl: string;
+    supabaseAnonKey: string;
+    onSave: (payload: SettingsPayload) => void;
     onClose: () => void;
   }
 
-  let { useManualRate, manualRate, apiRate, onSave, onClose }: Props = $props();
+  let {
+    useManualRate,
+    manualRate,
+    apiRate,
+    apiKey,
+    backend,
+    supabaseUrl,
+    supabaseAnonKey,
+    onSave,
+    onClose
+  }: Props = $props();
 
   let selectedUseManual = $state(false);
   let customRateInput = $state('50.0');
+  let apiKeyInput = $state('');
+  let selectedBackend = $state<'sqlite' | 'supabase'>('sqlite');
+  let urlInput = $state('');
+  let anonKeyInput = $state('');
 
   $effect(() => {
     selectedUseManual = useManualRate;
     customRateInput = manualRate.toString();
+    apiKeyInput = apiKey;
+    selectedBackend = backend;
+    urlInput = supabaseUrl;
+    anonKeyInput = supabaseAnonKey;
   });
 
   function handleSave() {
     const parsed = parseFloat(customRateInput);
     const validRate = isNaN(parsed) || parsed <= 0 ? 50.0 : parsed;
-    onSave(selectedUseManual, validRate);
+    onSave({
+      useManualRate: selectedUseManual,
+      manualRate: validRate,
+      apiKey: apiKeyInput.trim(),
+      backend: selectedBackend,
+      supabaseUrl: urlInput.trim(),
+      supabaseAnonKey: anonKeyInput.trim()
+    });
     onClose();
   }
 
@@ -105,6 +143,66 @@
           />
         </div>
       {/if}
+
+      <!-- Exchange Rate API Key -->
+      <div class="field-group">
+        <label for="api-key-input">ExchangeRate-API Key</label>
+        <input
+          id="api-key-input"
+          type="text"
+          placeholder="Leave empty to use the free tier"
+          bind:value={apiKeyInput}
+        />
+      </div>
+
+      <!-- Storage Backend -->
+      <div class="storage-section">
+        <span class="storage-title">Storage</span>
+        <p class="storage-desc">
+          Choose where transactions are saved. Supabase requires a URL and anon key.
+        </p>
+        <div class="mode-selector">
+          <button
+            type="button"
+            class="mode-btn {selectedBackend === 'sqlite' ? 'active' : ''}"
+            onclick={() => selectedBackend = 'sqlite'}
+          >
+            <Database size={16} />
+            <span>Local (SQLite)</span>
+          </button>
+          <button
+            type="button"
+            class="mode-btn {selectedBackend === 'supabase' ? 'active' : ''}"
+            onclick={() => selectedBackend = 'supabase'}
+          >
+            <Cloud size={16} />
+            <span>Supabase</span>
+          </button>
+        </div>
+
+        {#if selectedBackend === 'supabase'}
+          <div class="field-group">
+            <label for="supabase-url-input">Supabase URL</label>
+            <input
+              id="supabase-url-input"
+              type="text"
+              placeholder="https://xxxx.supabase.co"
+              bind:value={urlInput}
+            />
+          </div>
+          <div class="field-group">
+            <label for="supabase-key-input">Supabase Anon Key</label>
+            <input
+              id="supabase-key-input"
+              type="text"
+              bind:value={anonKeyInput}
+            />
+          </div>
+          <p class="storage-desc">
+            Note: credential changes take effect after restarting the app.
+          </p>
+        {/if}
+      </div>
     </div>
 
     <div class="modal-footer">
@@ -265,6 +363,25 @@
 
   input:focus {
     border-color: #10b981;
+  }
+
+  .storage-section {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    padding-top: 0.25rem;
+  }
+
+  .storage-title {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #cbd5e1;
+  }
+
+  .storage-desc {
+    margin: 0;
+    font-size: 0.78rem;
+    color: #64748b;
   }
 
   .modal-footer {

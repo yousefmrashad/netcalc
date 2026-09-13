@@ -150,6 +150,7 @@ fn parse_factor(tokens: &[Token], pos: &mut usize) -> Result<f64, String> {
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_sql::Builder::new().build())
         .invoke_handler(tauri::generate_handler![evaluate_math])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

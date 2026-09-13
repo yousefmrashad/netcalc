@@ -6,14 +6,26 @@
   import TransactionList from '$lib/components/TransactionList.svelte';
   import SettingsModal from '$lib/components/SettingsModal.svelte';
   import Toast, { type ToastMessage } from '$lib/components/Toast.svelte';
-  import { supabase } from '$lib/supabase';
+  import {
+    getBackend,
+    setBackend,
+    listTransactions,
+    deleteTransaction,
+    getExchangeRateApiKey,
+    type Backend
+  } from '$lib/db';
   import type { Transaction } from '$lib/types';
+  import type { SettingsPayload } from '$lib/components/SettingsModal.svelte';
 
   // Svelte 5 Reactive State Runes
   let transactions = $state<Transaction[]>([]);
   let apiRate = $state<number | null>(null);
   let manualRate = $state<number>(50.0);
   let useManualRate = $state<boolean>(false);
+  let apiKey = $state<string>('');
+  let backend = $state<Backend>('sqlite');
+  let supabaseUrl = $state<string>('');
+  let supabaseAnonKey = $state<string>('');
 
   let isInitialLoading = $state<boolean>(true);
   let isRefreshing = $state<boolean>(false);
@@ -69,6 +81,11 @@
         manualRate = parseFloat(savedRate) || 50.0;
       }
 
+      apiKey = getExchangeRateApiKey();
+      backend = getBackend();
+      supabaseUrl = localStorage.getItem('supabase_url') || '';
+      supabaseAnonKey = localStorage.getItem('supabase_anon_key') || '';
+
       const cachedJson = localStorage.getItem('cached_transactions');
       if (cachedJson) {
         const parsed = JSON.parse(cachedJson);
@@ -83,11 +100,11 @@
   }
 
   async function fetchExchangeRate(): Promise<number> {
-    const apiKey = import.meta.env.VITE_EXCHANGE_RATE_API_KEY || 'FREE';
-    if (apiKey === 'FREE') return 50.0;
+    const key = apiKey;
+    if (!key) return 50.0;
 
     try {
-      const res = await fetch(`https://v6.exchangerate-api.com/v6/${apiKey}/latest/USD`);
+      const res = await fetch(`https://v6.exchangerate-api.com/v6/${key}/latest/USD`);
       if (res.ok) {
         const data = await res.json();
         if (data && data.conversion_rates && typeof data.conversion_rates.EGP === 'number') {
@@ -105,21 +122,14 @@
 
     try {
       // Run concurrent requests for rate and database logs
-      const [fetchedRate, { data: dbData, error: dbError }] = await Promise.all([
+      const [fetchedRate, dbData] = await Promise.all([
         fetchExchangeRate(),
-        supabase.from('transactions').select('*').order('created_at', { ascending: false })
+        listTransactions()
       ]);
 
       apiRate = fetchedRate;
-
-      if (dbError) {
-        throw dbError;
-      }
-
-      if (dbData) {
-        transactions = dbData;
-        localStorage.setItem('cached_transactions', JSON.stringify(dbData));
-      }
+      transactions = dbData;
+      localStorage.setItem('cached_transactions', JSON.stringify(dbData));
 
       isOffline = false;
     } catch (err: any) {
@@ -149,8 +159,7 @@
     localStorage.setItem('cached_transactions', JSON.stringify(transactions));
 
     try {
-      const { error } = await supabase.from('transactions').delete().eq('id', id);
-      if (error) throw error;
+      await deleteTransaction(id);
       showToast('success', 'Transaction deleted');
     } catch (e: any) {
       console.error('Delete error:', e);
@@ -161,14 +170,30 @@
   }
 
   // Handle settings update
-  function handleSaveSettings(newUseManual: boolean, newManualRate: number) {
-    useManualRate = newUseManual;
-    manualRate = newManualRate;
+  async function handleSaveSettings(payload: SettingsPayload) {
+    useManualRate = payload.useManualRate;
+    manualRate = payload.manualRate;
+    apiKey = payload.apiKey;
 
-    localStorage.setItem('use_manual_rate', newUseManual.toString());
-    localStorage.setItem('manual_rate', newManualRate.toString());
+    localStorage.setItem('use_manual_rate', payload.useManualRate.toString());
+    localStorage.setItem('manual_rate', payload.manualRate.toString());
+    localStorage.setItem('exchange_rate_api_key', payload.apiKey);
+    localStorage.setItem('supabase_url', payload.supabaseUrl);
+    localStorage.setItem('supabase_anon_key', payload.supabaseAnonKey);
 
-    showToast('success', `Exchange rate set to ${newUseManual ? 'Manual (' + newManualRate.toFixed(2) + ' EGP)' : 'Auto API'}`);
+    const ok = await setBackend(payload.backend);
+    backend = ok ? payload.backend : 'sqlite';
+
+    if (ok) {
+      showToast(
+        'success',
+        `Settings saved (${backend === 'supabase' ? 'Supabase' : 'Local SQLite'})`
+      );
+    } else {
+      showToast('error', 'Could not connect to Supabase. Using local SQLite instead.');
+    }
+
+    fetchRemoteData();
   }
 
   // Export to CSV
@@ -253,6 +278,10 @@
       useManualRate={useManualRate}
       manualRate={manualRate}
       apiRate={apiRate}
+      apiKey={apiKey}
+      backend={backend}
+      supabaseUrl={supabaseUrl}
+      supabaseAnonKey={supabaseAnonKey}
       onSave={handleSaveSettings}
       onClose={() => isSettingsOpen = false}
     />
