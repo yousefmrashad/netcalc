@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:math_expressions/math_expressions.dart';
-import 'package:netcalc_app/services/supabase_service.dart'; // Global supabase client reference
+import 'package:netcalc_app/services/data_repository.dart';
 
 class NewEntryForm extends StatefulWidget {
   final double rate;
@@ -70,7 +70,7 @@ class _NewEntryFormState extends State<NewEntryForm> {
           'MMM dd, yyyy • HH:mm',
         ).format(targetDate);
 
-        await supabase.from('transactions').insert({
+        await DataRepository.instance.insert({
           'description': _descController.text,
           'amount': finalAmount,
           'rate': widget.rate,

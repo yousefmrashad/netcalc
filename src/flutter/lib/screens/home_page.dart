@@ -4,8 +4,8 @@ import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:netcalc_app/services/supabase_service.dart'; // Global supabase client reference
+import 'package:netcalc_app/services/data_repository.dart';
+import 'package:netcalc_app/screens/settings_page.dart';
 import 'package:netcalc_app/widgets/new_entry_form.dart';
 
 class HomePage extends StatefulWidget {
@@ -87,6 +87,12 @@ class _HomePageState extends State<HomePage> {
         ),
       ),
     );
+  }
+
+  void _openSettings() {
+    Navigator.of(context)
+        .push(MaterialPageRoute(builder: (_) => const SettingsPage()))
+        .then((_) => _fetchInitialData());
   }
 
   void _showExchangeRateDialog() {
@@ -274,8 +280,8 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<double> _getExchangeRate() async {
-    final apiKey = dotenv.get('EXCHANGE_RATE_API_KEY', fallback: 'FREE');
-    if (apiKey == 'FREE') return 50.0;
+    final apiKey = _prefs.getString('exchange_rate_api_key') ?? '';
+    if (apiKey.isEmpty) return 50.0;
 
     try {
       final response = await http.get(
@@ -296,7 +302,7 @@ class _HomePageState extends State<HomePage> {
     });
 
     try {
-      await supabase.from('transactions').delete().eq('id', id);
+      await DataRepository.instance.delete(id);
       if (_prefsInitialized) {
         await _prefs.setString(
           'cached_transactions',
@@ -309,10 +315,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<List<dynamic>> _loadTransactions() async {
-    return await supabase
-        .from('transactions')
-        .select()
-        .order('created_at', ascending: false);
+    return await DataRepository.instance.list();
   }
 
   double _calculateTotalUsd(List<dynamic> transactions) {
@@ -399,14 +402,26 @@ class _HomePageState extends State<HomePage> {
                                         .titleLarge
                                         ?.copyWith(fontWeight: FontWeight.bold),
                                   ),
-                                  Row(
-                                    children: [
-                                      if (_transactions.isNotEmpty)
-                                        IconButton(
-                                          icon: const Icon(Icons.copy_all),
-                                          tooltip: 'Export CSV',
-                                          onPressed: _exportToCsv,
+                          Row(
+                            children: [
+                              if (_transactions.isNotEmpty)
+                                IconButton(
+                                  icon: const Icon(Icons.copy_all),
+                                  tooltip: 'Export CSV',
+                                  onPressed: _exportToCsv,
+                                ),
+                              IconButton(
+                                icon: const Icon(Icons.settings_outlined),
+                                tooltip: 'Settings',
+                                onPressed: _openSettings,
+                              ),
+                                      IconButton(
+                                        icon: const Icon(
+                                          Icons.settings_outlined,
                                         ),
+                                        tooltip: 'Settings',
+                                        onPressed: _openSettings,
+                                      ),
                                       if (_isBackgroundLoading) ...[
                                         const SizedBox(width: 8),
                                         SizedBox(
@@ -598,6 +613,13 @@ class _HomePageState extends State<HomePage> {
       pinned: true,
       stretch: true,
       backgroundColor: colorScheme.surface,
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.settings_outlined),
+          tooltip: 'Settings',
+          onPressed: _openSettings,
+        ),
+      ],
       flexibleSpace: FlexibleSpaceBar(
         stretchModes: const [StretchMode.zoomBackground],
         background: Container(

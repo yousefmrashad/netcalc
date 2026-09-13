@@ -1,18 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:dynamic_color/dynamic_color.dart';
 import 'package:netcalc_app/screens/home_page.dart';
+import 'package:netcalc_app/services/data_repository.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await dotenv.load(fileName: ".env");
-
-  await Supabase.initialize(
-    url: dotenv.get('SUPABASE_URL'),
-    anonKey: dotenv.get('SUPABASE_ANON_KEY'),
-  );
-
+  await DataRepository.instance.init();
   runApp(const MyApp());
 }
 
