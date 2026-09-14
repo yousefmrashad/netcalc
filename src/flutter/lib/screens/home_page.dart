@@ -225,7 +225,7 @@ class _HomePageState extends State<HomePage> {
         _useManualRate = _prefs.getBool('use_manual_rate') ?? false;
         _manualRate = _prefs.getDouble('manual_rate') ?? 50.0;
 
-        final cachedJson = _prefs.getString('cached_transactions');
+        final cachedJson = _prefs.getString(_transactionCacheKey);
         if (cachedJson != null) {
           final List<dynamic> cachedList = jsonDecode(cachedJson);
           setState(() {
@@ -255,7 +255,7 @@ class _HomePageState extends State<HomePage> {
       final List<dynamic> transactions = results[1] as List<dynamic>;
 
       if (_prefsInitialized) {
-        await _prefs.setString('cached_transactions', jsonEncode(transactions));
+        await _prefs.setString(_transactionCacheKey, jsonEncode(transactions));
       }
 
       if (!mounted) return;
@@ -295,19 +295,24 @@ class _HomePageState extends State<HomePage> {
     return 50.0;
   }
 
+  String get _transactionCacheKey =>
+      'cached_transactions_${DataRepository.instance.backend}';
+
   Future<void> _deleteEntry(int id) async {
+    if (!mounted) return;
     setState(() {
       _transactions.removeWhere((t) => t['id'] == id);
       _totalUsd = _calculateTotalUsd(_transactions);
     });
 
     try {
-      await DataRepository.instance.delete(id);
+      final deleted = await DataRepository.instance.delete(id);
+      if (deleted == 0) {
+        _fetchInitialData();
+        return;
+      }
       if (_prefsInitialized) {
-        await _prefs.setString(
-          'cached_transactions',
-          jsonEncode(_transactions),
-        );
+        await _prefs.setString(_transactionCacheKey, jsonEncode(_transactions));
       }
     } catch (e) {
       _fetchInitialData();
@@ -402,19 +407,14 @@ class _HomePageState extends State<HomePage> {
                                         .titleLarge
                                         ?.copyWith(fontWeight: FontWeight.bold),
                                   ),
-                          Row(
-                            children: [
-                              if (_transactions.isNotEmpty)
-                                IconButton(
-                                  icon: const Icon(Icons.copy_all),
-                                  tooltip: 'Export CSV',
-                                  onPressed: _exportToCsv,
-                                ),
-                              IconButton(
-                                icon: const Icon(Icons.settings_outlined),
-                                tooltip: 'Settings',
-                                onPressed: _openSettings,
-                              ),
+                                  Row(
+                                    children: [
+                                      if (_transactions.isNotEmpty)
+                                        IconButton(
+                                          icon: const Icon(Icons.copy_all),
+                                          tooltip: 'Export CSV',
+                                          onPressed: _exportToCsv,
+                                        ),
                                       IconButton(
                                         icon: const Icon(
                                           Icons.settings_outlined,

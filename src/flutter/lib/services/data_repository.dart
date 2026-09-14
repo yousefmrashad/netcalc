@@ -65,7 +65,8 @@ class DataRepository {
       final rows = await Supabase.instance.client
           .from('transactions')
           .select()
-          .order('created_at', ascending: false);
+          .order('created_at', ascending: false)
+          .order('id', ascending: false);
       return List<Map<String, dynamic>>.from(rows);
     }
     return TransactionDb.instance.list();
@@ -73,20 +74,27 @@ class DataRepository {
 
   Future<void> insert(Map<String, dynamic> row) async {
     if (_useSupabase) {
-      await Supabase.instance.client.from('transactions').insert(row);
+      await Supabase.instance.client.from('transactions').insert({
+        'description': row['description'],
+        'amount': row['amount'],
+        'rate': row['rate'],
+        'date': row['date'],
+        'created_at': DateTime.now().toIso8601String(),
+      });
     } else {
       await TransactionDb.instance.insert(row);
     }
   }
 
-  Future<void> delete(int id) async {
+  Future<int> delete(int id) async {
     if (_useSupabase) {
-      await Supabase.instance.client
+      final rows = await Supabase.instance.client
           .from('transactions')
           .delete()
-          .eq('id', id);
-    } else {
-      await TransactionDb.instance.delete(id);
+          .eq('id', id)
+          .select();
+      return (rows as List).length;
     }
+    return TransactionDb.instance.delete(id);
   }
 }
