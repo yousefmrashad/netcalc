@@ -38,6 +38,22 @@ create table transactions (
 
 *(Note: `id` and `created_at` are default columns in Supabase. If you are creating the table using the Supabase visual Table Editor UI, you only need to manually add the `description`, `amount`, `rate`, and `date` columns.)*
 
+### 📦 Download & Install
+
+Grab the latest build from the [Releases](https://github.com/yousefmrashad/netcalc/releases/latest) page:
+
+**Android**
+1. Download the APK matching your device — most modern phones use `arm64-v8a`; older devices use `armeabi-v7a`; emulators use `x86_64`.
+2. Open the APK and allow installs from unknown sources when prompted (the app is not distributed through the Play Store).
+
+**Windows**
+1. Download `netcalc-windows-x64.zip` and extract it anywhere.
+2. Run `NetCalc.exe`. If SmartScreen shows a "Windows protected your PC" warning, click **More info → Run anyway** — the app is not code-signed, so this warning is expected.
+
+**Linux**
+1. Download `netcalc-linux-x64.tar.gz` and extract it: `tar -xzf netcalc-linux-x64.tar.gz`
+2. Run the `NetCalc` binary inside. GTK3 libraries are required (installed by default on all major desktop distributions).
+
 ### License
 
 This project is licensed under the GNU GPLv3 License.
