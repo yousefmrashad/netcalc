@@ -89,11 +89,11 @@ BEGIN
     BEGIN
         BLOCK "040904e4"
         BEGIN
-            VALUE "CompanyName", "com.example" "\0"
+            VALUE "CompanyName", "com.yousefmrashad" "\0"
             VALUE "FileDescription", "NetCalc" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
             VALUE "InternalName", "NetCalc" "\0"
-            VALUE "LegalCopyright", "Copyright (C) 2026 com.example. All rights reserved." "\0"
+            VALUE "LegalCopyright", "Copyright (C) 2026 com.yousefmrashad. All rights reserved." "\0"
             VALUE "OriginalFilename", "NetCalc.exe" "\0"
             VALUE "ProductName", "NetCalc" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"

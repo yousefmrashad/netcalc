@@ -8,7 +8,7 @@
 PRODUCT_NAME = NetCalc
 
 // The application's bundle identifier
-PRODUCT_BUNDLE_IDENTIFIER = com.example.netcalcApp
+PRODUCT_BUNDLE_IDENTIFIER = com.yousefmrashad.netcalcApp
 
 // The copyright displayed in application information
-PRODUCT_COPYRIGHT = Copyright © 2026 com.example. All rights reserved.
+PRODUCT_COPYRIGHT = Copyright © 2026 com.yousefmrashad. All rights reserved.

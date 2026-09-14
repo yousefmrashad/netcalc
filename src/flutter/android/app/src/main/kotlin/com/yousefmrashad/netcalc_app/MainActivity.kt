@@ -1,4 +1,4 @@
-package com.example.netcalc_app
+package com.yousefmrashad.netcalc_app
 
 import io.flutter.embedding.android.FlutterActivity
 
