@@ -55,7 +55,7 @@ class DataRepository {
       throw StateError('Supabase credentials not configured');
     }
     if (!_supabaseInitialized) {
-      await Supabase.initialize(url: url, anonKey: key);
+      await Supabase.initialize(url: url, publishableKey: key);
       _supabaseInitialized = true;
     }
   }

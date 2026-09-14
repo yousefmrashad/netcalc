@@ -56,10 +56,8 @@ class _NewEntryFormState extends State<NewEntryForm> {
       try {
         final p = ShuntingYardParser();
         final exp = p.parse(_amountController.text);
-        final double amountVal = exp.evaluate(
-          EvaluationType.REAL,
-          ContextModel(),
-        );
+        final double amountVal =
+            RealEvaluator(ContextModel()).evaluate(exp).toDouble();
 
         double finalAmount = _currencySelection.first == 'EGP'
             ? amountVal / widget.rate
