@@ -35,7 +35,7 @@ class MyApp extends StatelessWidget {
         }
 
         return MaterialApp(
-          title: 'Savings Tracker',
+          title: 'NetCalc',
           debugShowCheckedModeBanner: false,
           themeMode:
               ThemeMode.system, // Automatically uses device's Light/Dark mode

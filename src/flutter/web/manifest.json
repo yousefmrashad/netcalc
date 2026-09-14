@@ -1,11 +1,11 @@
 {
-    "name": "netcalc_app",
-    "short_name": "netcalc_app",
+    "name": "NetCalc",
+    "short_name": "NetCalc",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "description": "NetCalc - Personal finance and savings tracker.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
