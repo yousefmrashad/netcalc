@@ -33,6 +33,7 @@ class _HomePageState extends State<HomePage> {
   bool _prefsInitialized = false;
   bool _useManualRate = false;
   double _manualRate = 50.0;
+  int _loadSeq = 0;
 
   @override
   void initState() {
@@ -242,8 +243,16 @@ class _HomePageState extends State<HomePage> {
       if (_transactions.isEmpty) {
         _isInitialLoading = true;
       }
-      _isBackgroundLoading = true;
       _error = null;
+    });
+
+    // Delayed spinner: only show _isBackgroundLoading if the load takes
+    // longer than 200ms, so fast SQLite reloads never flash.
+    final seq = ++_loadSeq;
+    bool done = false;
+    Future.delayed(const Duration(milliseconds: 200), () {
+      if (done || !mounted || seq != _loadSeq) return;
+      setState(() => _isBackgroundLoading = true);
     });
 
     try {
@@ -258,7 +267,8 @@ class _HomePageState extends State<HomePage> {
         await _prefs.setString(_transactionCacheKey, jsonEncode(transactions));
       }
 
-      if (!mounted) return;
+      if (!mounted || seq != _loadSeq) return;
+      done = true;
       setState(() {
         _rate = _useManualRate ? _manualRate : rate;
         _transactions = transactions;
@@ -267,7 +277,8 @@ class _HomePageState extends State<HomePage> {
         _isBackgroundLoading = false;
       });
     } catch (e) {
-      if (!mounted) return;
+      if (!mounted || seq != _loadSeq) return;
+      done = true;
       setState(() {
         _rate = _useManualRate ? _manualRate : (_rate ?? 50.0);
         _error = _transactions.isNotEmpty

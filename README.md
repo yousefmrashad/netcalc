@@ -12,9 +12,21 @@ NetCalc is a simple, minimal personal finance application. It allows you to log 
 * **Local-First Storage:** Transactions are stored by default in an on-device **SQLite** database (`netcalc.db`), so the app works fully offline.
 * **Optional Cloud Sync:** Supabase can optionally be enabled as the storage backend from the in-app Settings page.
 
+### 📸 Screenshots
+
+| Home (Light) | Home (Dark) |
+|---|---|
+| ![Home light](docs/screenshots/home-portrait-light.jpg) | ![Home dark](docs/screenshots/home-portrait-dark.jpg) |
+
+| Settings (Light) | Settings (Dark) |
+|---|---|
+| ![Settings light](docs/screenshots/settings-portrait-light.jpg) | ![Settings dark](docs/screenshots/settings-portrait-dark.jpg) |
+
+More variants (landscape, etc.) are in [`docs/screenshots/`](docs/screenshots/).
+
 ### ⚙️ Configuration (in-app Settings)
 
-All credentials are entered by the user in the app's **Settings** page (no `.env` or build-time configuration required):
+All credentials are entered by the user in the app's **Settings** page:
 
 * **ExchangeRate-API Key** — API key from [ExchangeRate-API](https://www.exchangerate-api.com/) for fetching live conversion rates. Leave empty to fall back to a static rate.
 * **Storage Backend** — choose between:
