@@ -1,78 +1,61 @@
-import 'dart:io';
+import 'package:drift/drift.dart';
 
-import 'package:path/path.dart' as p;
-import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'package:netcalc_app/database/app_database.dart';
 
 class TransactionDb {
   TransactionDb._();
   static final TransactionDb instance = TransactionDb._();
 
-  Database? _db;
-  Future<Database>? _opening;
-
-  Future<Database> _connect() {
-    if (Platform.isWindows || Platform.isLinux) {
-      sqfliteFfiInit();
-      databaseFactory = databaseFactoryFfi;
-    }
-    return getDatabasesPath().then((dir) => openDatabase(
-          p.join(dir, 'netcalc.db'),
-          version: 2,
-          onCreate: (db, version) async {
-            await db.execute('''
-              CREATE TABLE transactions(
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                description TEXT NOT NULL,
-                amount REAL NOT NULL,
-                rate REAL,
-                date TEXT NOT NULL,
-                created_at TEXT NOT NULL
-              )
-            ''');
-            await db.execute(
-              'CREATE INDEX idx_transactions_created_at '
-              'ON transactions(created_at DESC)',
-            );
-          },
-          onUpgrade: (db, oldVersion, newVersion) async {
-            if (oldVersion < 2) {
-              await db.execute(
-                'CREATE INDEX IF NOT EXISTS idx_transactions_created_at '
-                'ON transactions(created_at DESC)',
-              );
-            }
-          },
-        ));
-  }
+  AppDatabase? _db;
 
   Future<void> open() async {
-    _opening ??= _connect();
-    try {
-      _db = await _opening;
-    } catch (e) {
-      _opening = null;
-      rethrow;
+    _db ??= AppDatabase();
+    // Probe query: forces the lazy connection open now (same as before),
+    // so errors surface here instead of on first list/insert.
+    // ignore: avoid_redundant_async
+    await _db!.customSelect('SELECT 1').get();
+  }
+
+  AppDatabase get _ready {
+    final db = _db;
+    if (db == null) {
+      throw StateError('TransactionDb.open() must be called first');
     }
+    return db;
   }
 
   Future<List<Map<String, Object?>>> list() async {
-    // sqflite returns a read-only QueryResultSet; copy it so callers
-    // can mutate the list (e.g. removeWhere after a delete).
-    final rows = await _db!.query(
-      'transactions',
-      orderBy: 'created_at DESC, id DESC',
-    );
-    return List<Map<String, Object?>>.from(rows);
+    final rows = await (_ready.select(_ready.transactions)
+          ..orderBy([
+            (t) => OrderingTerm.desc(t.createdAt),
+            (t) => OrderingTerm.desc(t.id),
+          ]))
+        .get();
+    // Keep the old Map-based shape so callers are untouched.
+    // The list is a plain growable List, safe for removeWhere.
+    return rows
+        .map((t) => <String, Object?>{
+              'id': t.id,
+              'description': t.description,
+              'amount': t.amount,
+              'rate': t.rate,
+              'date': t.date,
+              'created_at': t.createdAt,
+            })
+        .toList();
   }
 
-  Future<int> insert(Map<String, Object?> row) => _db!.insert('transactions', {
-        'description': row['description'],
-        'amount': row['amount'],
-        'rate': row['rate'],
-        'date': row['date'],
-        'created_at': DateTime.now().toIso8601String(),
-      });
+  Future<int> insert(Map<String, Object?> row) =>
+      _ready.into(_ready.transactions).insert(
+            TransactionsCompanion.insert(
+              description: row['description'] as String,
+              amount: (row['amount'] as num).toDouble(),
+              rate: Value((row['rate'] as num?)?.toDouble()),
+              date: row['date'] as String,
+              createdAt: DateTime.now().toIso8601String(),
+            ),
+          );
 
   Future<int> delete(int id) =>
-      _db!.delete('transactions', where: 'id = ?', whereArgs: [id]);
+      (_ready.delete(_ready.transactions)..where((t) => t.id.equals(id))).go();
 }
