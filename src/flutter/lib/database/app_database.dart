@@ -52,6 +52,13 @@ class AppDatabase extends _$AppDatabase {
 }
 
 LazyDatabase _open() => LazyDatabase(() async {
+      // Drift uses NativeDatabase (via package:sqlite3), but the directory
+      // helper still comes from sqflite_common_ffi, which needs init on
+      // desktop. This was present before the drift migration and got dropped.
+      if (Platform.isWindows || Platform.isLinux) {
+        sqfliteFfiInit();
+        databaseFactory = databaseFactoryFfi;
+      }
       // Same file the old code used, so existing users keep their data.
       final dir = await getDatabasesPath();
       final file = File(p.join(dir, 'netcalc.db'));
